@@ -5,6 +5,9 @@ import { connectDB } from '@/lib/db'
 import User from '@/models/User'
 import { z } from 'zod'
 
+// ✅ IMPORTANT FIX: force dynamic runtime (fixes Vercel build error)
+export const dynamic = 'force-dynamic'
+
 const updateSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   timezone: z.string().optional(),
@@ -27,9 +30,6 @@ export async function GET() {
 
     await connectDB()
 
-    // FIX:
-    // Use email instead of session.user.id
-    // because id is missing/null in your session
     const user = await User.findOne({
       email: session.user.email,
     }).lean()
@@ -72,8 +72,6 @@ export async function PUT(req: NextRequest) {
 
     await connectDB()
 
-    // FIX:
-    // Update using email instead of session.user.id
     const user = await User.findOneAndUpdate(
       {
         email: session.user.email,
