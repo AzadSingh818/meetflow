@@ -7,9 +7,8 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.supabase.co' },
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ['mongoose'],
-  },
-}
 
-module.exports = nextConfig
+  serverExternalPackages: ["mongoose", "bcrypt"],
+};
+
+module.exports = nextConfig;
