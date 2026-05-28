@@ -9,17 +9,18 @@ interface MainContentProps {
 }
 
 const MainContent = ({ children }: MainContentProps) => {
-
   const sidebarOpen = useAppStore((state) => state.sidebarOpen);
 
   return (
     <div
       className={`flex flex-col flex-1 min-w-0 overflow-hidden transition-all duration-300 ${
-        sidebarOpen ? 'ml-64' : 'ml-16'
+        // On mobile: no margin (sidebar overlays). On desktop: push content right.
+        sidebarOpen
+          ? 'ml-0 md:ml-64'
+          : 'ml-0 md:ml-16'
       }`}
     >
       <Header />
-
       <main className="flex-1 overflow-y-auto">
         {children}
       </main>
