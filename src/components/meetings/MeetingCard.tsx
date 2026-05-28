@@ -13,21 +13,18 @@ interface Props {
 export function MeetingCard({ meeting, compact = false }: Props) {
   return (
     <Link href={`/meetings/${meeting._id}`}>
-      <div
-        className={`group border border-gray-100 rounded-lg hover:border-primary/30 hover:shadow-sm
-          transition-all bg-white ${compact ? "p-2.5 mb-2" : "p-4 mb-3"}`}
-      >
-        {/* Color dot + title */}
+      <div className={`group border border-gray-100 rounded-xl hover:border-blue-200
+        hover:shadow-sm transition-all bg-white ${compact ? 'p-2.5' : 'p-3 sm:p-4'}`}>
+
+        {/* Color dot + title + badge */}
         <div className="flex items-start gap-2">
           <div
-            className="mt-1 w-2.5 h-2.5 rounded-full shrink-0"
+            className="mt-1 w-2.5 h-2.5 rounded-full flex-shrink-0"
             style={{ backgroundColor: meeting.color }}
           />
           <div className="flex-1 min-w-0">
-            <p
-              className={`font-medium text-gray-900 truncate group-hover:text-primary
-                transition-colors ${compact ? "text-xs" : "text-sm"}`}
-            >
+            <p className={`font-medium text-gray-900 truncate group-hover:text-blue-600
+              transition-colors ${compact ? 'text-xs' : 'text-sm'}`}>
               {meeting.title}
             </p>
             {!compact && (
@@ -37,34 +34,40 @@ export function MeetingCard({ meeting, compact = false }: Props) {
             )}
           </div>
           <Badge
-            variant={meeting.status === "scheduled" ? "default" : "secondary"}
-            className="text-xs shrink-0"
+            variant={meeting.status === 'scheduled' ? 'default' : 'secondary'}
+            className="text-xs flex-shrink-0 capitalize"
           >
             {meeting.status}
           </Badge>
         </div>
 
-        {/* Meta row */}
-        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-xs text-gray-500">
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {formatMeetingTime(meeting.startTime, meeting.endTime)}
-            {" · "}
-            {getMeetingDuration(meeting.startTime, meeting.endTime)}
-          </span>
-          {meeting.location && !compact && (
-            <span className="flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
-              {meeting.location}
+        {/* Meta row — wraps naturally on small screens */}
+        {!compact && (
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-gray-500">
+            <span className="flex items-center gap-1 flex-shrink-0">
+              <Clock className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">
+                {formatMeetingTime(meeting.startTime, meeting.endTime)}
+                {' · '}
+                {getMeetingDuration(meeting.startTime, meeting.endTime)}
+              </span>
             </span>
-          )}
-          {meeting.attendees.length > 0 && !compact && (
-            <span className="flex items-center gap-1">
-              <Users className="w-3 h-3" />
-              {meeting.attendees.length} attendee{meeting.attendees.length !== 1 ? "s" : ""}
-            </span>
-          )}
-        </div>
+            {meeting.location && (
+              <span className="flex items-center gap-1 min-w-0">
+                <MapPin className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate max-w-[120px] sm:max-w-none">
+                  {meeting.location}
+                </span>
+              </span>
+            )}
+            {meeting.attendees.length > 0 && (
+              <span className="flex items-center gap-1 flex-shrink-0">
+                <Users className="w-3 h-3 flex-shrink-0" />
+                {meeting.attendees.length} attendee{meeting.attendees.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </Link>
   );
