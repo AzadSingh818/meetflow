@@ -3,15 +3,18 @@ import { processReminders } from '@/lib/reminders'
 
 /**
  * GET /api/cron/reminders
- * Called by Vercel Cron every 30 minutes (see vercel.json).
- * Protected by CRON_SECRET so only Vercel can trigger it.
+ * Called by GitHub Actions every 30 minutes.
+ * Protected by CRON_SECRET header.
  */
 export async function GET(req: NextRequest) {
-  // Verify the request comes from Vercel Cron
   const authHeader = req.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // If CRON_SECRET is set, enforce it — always reject if header missing or wrong
+  if (!cronSecret) {
+    console.warn('[cron/reminders] CRON_SECRET not set — endpoint is unprotected!')
+  } else if (authHeader !== `Bearer ${cronSecret}`) {
+    console.warn('[cron/reminders] Unauthorized attempt:', authHeader)
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -20,10 +23,12 @@ export async function GET(req: NextRequest) {
     const results = await processReminders()
     const elapsed = Date.now() - start
 
-    console.log(`[cron/reminders] checked=${results.checked} sent=${results.sent} errors=${results.errors} ms=${elapsed}`)
+    console.log(
+      `[cron/reminders] checked=${results.checked} sent=${results.sent} errors=${results.errors} ms=${elapsed}`
+    )
 
     return NextResponse.json({
-      ok:      true,
+      ok:        true,
       ...results,
       elapsedMs: elapsed,
     })

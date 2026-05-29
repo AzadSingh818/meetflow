@@ -1,0 +1,13 @@
+name: Send Reminders
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # every 30 minutes
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call reminder API
+        run: |
+          curl -X GET "${{ secrets.APP_URL }}/api/cron/reminders" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
