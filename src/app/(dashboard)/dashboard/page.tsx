@@ -8,6 +8,10 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Dashboard' };
 
+// Force dynamic so new Date() is always evaluated at request time on the server
+// and never pre-rendered as static HTML that mismatches the client
+export const dynamic = 'force-dynamic'
+
 async function getDashboardData(userId: string, email: string) {
   await connectDB();
 
@@ -37,6 +41,13 @@ const STATS = [
   { key: 'completed', label: 'Completed', Icon: CheckCircle, color: 'text-gray-600',   bg: 'bg-gray-50'   },
 ];
 
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'morning'
+  if (hour < 18) return 'afternoon'
+  return 'evening'
+}
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session) return null;
@@ -46,20 +57,23 @@ export default async function DashboardPage() {
     session.user.email
   );
 
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
+  // Greeting computed once on the server — no client mismatch possible
+  const greeting = getGreeting()
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
 
-      {/* Greeting */}
+      {/* Greeting — suppressHydrationWarning in case of tiny clock skew */}
       <div>
-        <h2 className="text-lg sm:text-xl font-semibold truncate">
+        <h2
+          className="text-lg sm:text-xl font-semibold truncate"
+          suppressHydrationWarning
+        >
           Good {greeting}, {session.user.name}
         </h2>
       </div>
 
-      {/* Stats grid — 2 cols on mobile, 4 on desktop */}
+      {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {STATS.map(({ key, label, Icon, color, bg }) => (
           <div key={key}
@@ -77,7 +91,7 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {/* Calendar — full width, height adapts to screen */}
+      {/* Calendar */}
       <div className="bg-white rounded-xl border p-3 sm:p-5 overflow-hidden">
         <CalendarView meetings={JSON.parse(JSON.stringify(meetings))} />
       </div>
