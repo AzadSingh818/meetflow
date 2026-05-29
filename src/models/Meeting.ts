@@ -1,75 +1,66 @@
-import mongoose, { Document, Model, Schema } from 'mongoose'
+import mongoose, { Schema, Document, Model } from 'mongoose'
 
 export interface IAttendee {
-  user?:      mongoose.Types.ObjectId
-  email:      string
-  name?:      string
-  status:     'pending' | 'accepted' | 'declined'
-  rsvpToken?: string   // ← ADD THIS
-}
-
-export interface IRecurrence {
-  enabled:  boolean
-  pattern?: 'daily' | 'weekly' | 'monthly'
-  until?:   Date
+  email:  string
+  name?:  string
+  status: 'pending' | 'accepted' | 'declined'
 }
 
 export interface IMeeting extends Document {
-  _id: mongoose.Types.ObjectId
+  _id:         mongoose.Types.ObjectId
   title:       string
   description?: string
   organizer:   mongoose.Types.ObjectId
-  attendees:   IAttendee[]
   startTime:   Date
   endTime:     Date
-  timezone:    string
   location?:   string
   meetLink?:   string
-  status:      'scheduled' | 'cancelled' | 'completed'
-  recurrence:  IRecurrence
-  tags:        string[]
   color:       string
+  tags:        string[]
+  attendees:   IAttendee[]
   reminders:   number[]
-  createdAt:   Date
-  updatedAt:   Date
+  remindersSent: number[]   // ← NEW: tracks which intervals have been sent
+  status:      'scheduled' | 'cancelled' | 'completed'
+  recurrence?: {
+    enabled:  boolean
+    pattern?: 'daily' | 'weekly' | 'monthly'
+    until?:   Date
+  }
+  createdAt:  Date
+  updatedAt:  Date
 }
 
 const AttendeeSchema = new Schema<IAttendee>({
-  user:       { type: Schema.Types.ObjectId, ref: 'User' },
-  email:      { type: String, required: true },
-  name:       { type: String },
-  status:     { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending' },
-  rsvpToken:  { type: String },   // ← ADD THIS
+  email:  { type: String, required: true, lowercase: true, trim: true },
+  name:   { type: String },
+  status: { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending' },
 }, { _id: false })
 
-const MeetingSchema = new Schema<IMeeting>(
-  {
-    title:       { type: String, required: [true, 'Title is required'], trim: true, maxlength: 120 },
-    description: { type: String, maxlength: 2000 },
-    organizer:   { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    attendees:   [AttendeeSchema],
-    startTime:   { type: Date, required: [true, 'Start time is required'] },
-    endTime:     { type: Date, required: [true, 'End time is required'] },
-    timezone:    { type: String, default: 'UTC' },
-    location:    { type: String, maxlength: 200 },
-    meetLink:    { type: String },
-    status:      { type: String, enum: ['scheduled', 'cancelled', 'completed'], default: 'scheduled' },
-    recurrence: {
-      enabled: { type: Boolean, default: false },
-      pattern: { type: String, enum: ['daily', 'weekly', 'monthly'] },
-      until:   { type: Date },
-    },
-    tags:      [{ type: String, trim: true }],
-    color:     { type: String, default: '#2563EB' },
-    reminders: [{ type: Number }],
+const MeetingSchema = new Schema<IMeeting>({
+  title:       { type: String, required: true, maxlength: 120, trim: true },
+  description: { type: String, maxlength: 2000 },
+  organizer:   { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  startTime:   { type: Date, required: true, index: true },
+  endTime:     { type: Date, required: true },
+  location:    { type: String, maxlength: 200 },
+  meetLink:    { type: String },
+  color:       { type: String, default: '#2563EB' },
+  tags:        { type: [String], default: [] },
+  attendees:   { type: [AttendeeSchema], default: [] },
+  reminders:   { type: [Number], default: [15] },
+  remindersSent: { type: [Number], default: [] },  // ← NEW field
+  status:      { type: String, enum: ['scheduled', 'cancelled', 'completed'], default: 'scheduled', index: true },
+  recurrence: {
+    enabled: { type: Boolean, default: false },
+    pattern: { type: String, enum: ['daily', 'weekly', 'monthly'] },
+    until:   { type: Date },
   },
-  { timestamps: true }
-)
+}, {
+  timestamps: true,
+})
 
-// ── Indexes for query performance ──────────────────────────────────────────
-MeetingSchema.index({ organizer: 1, startTime: 1 })
-MeetingSchema.index({ 'attendees.email': 1 })
-MeetingSchema.index({ status: 1 })
+// Text index for full-text search
+MeetingSchema.index({ title: 'text', description: 'text', tags: 'text' })
 
 const Meeting: Model<IMeeting> =
   mongoose.models.Meeting ?? mongoose.model<IMeeting>('Meeting', MeetingSchema)

@@ -1,10 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { Menu, Search } from 'lucide-react'
-import { useAppStore } from '@/store/useAppStore'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Bell } from 'lucide-react'
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard':       'Dashboard',
@@ -14,54 +11,45 @@ const PAGE_TITLES: Record<string, string> = {
   '/profile':         'Profile',
 }
 
+function getTitle(pathname: string) {
+  if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname]
+  if (pathname.startsWith('/meetings/') && pathname.endsWith('/edit')) return 'Edit Meeting'
+  if (pathname.startsWith('/meetings/')) return 'Meeting Details'
+  return 'MeetFlow'
+}
+
 export default function Header() {
-  const pathname      = usePathname()
-  const toggleSidebar = useAppStore(s => s.toggleSidebar)
-  const [query, setQuery] = useState('')
-  const router = useRouter()
-
-  const title =
-    PAGE_TITLES[pathname] ??
-    Object.entries(PAGE_TITLES).find(([k]) => pathname.startsWith(k + '/'))?.[1] ??
-    'MeetFlow'
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (query.trim()) {
-      router.push(`/meetings?search=${encodeURIComponent(query.trim())}`)
-      setQuery('')
-    }
-  }
+  const pathname = usePathname()
 
   return (
-    <header className="h-16 flex items-center justify-between px-4 bg-white border-b border-gray-100 flex-shrink-0">
+    <header className="h-16 bg-white border-b border-gray-100 flex items-center px-6 gap-4 flex-shrink-0">
+      <h1 className="text-lg font-semibold text-gray-900 mr-auto">{getTitle(pathname)}</h1>
 
-      {/* Left: hamburger + title */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={toggleSidebar}
-          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-          aria-label="Toggle sidebar"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-        <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
+      {/* Search */}
+      <div className="hidden sm:block">
+        <input
+          type="text"
+          placeholder="Search..."
+          className="h-9 w-64 rounded-lg border border-gray-200 px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+        />
       </div>
 
-      {/* Right: search only — bell is now in sidebar */}
-      <form onSubmit={handleSearch} className="hidden sm:flex items-center">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search meetings..."
-            className="h-9 w-56 pl-9 pr-3 rounded-lg border border-gray-200 bg-gray-50 text-sm
-                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
-          />
-        </div>
-      </form>
+      {/* Notifications */}
+      {/* <button className="relative h-9 w-9 flex items-center justify-center rounded-lg
+                         hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors">
+        <Bell className="h-[18px] w-[18px]" />
+        <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-blue-600 ring-2 ring-white" />
+      </button> */}
 
+      {/* Date/time */}
+      <div className="hidden lg:block text-right">
+        <p className="text-xs font-medium text-gray-900">
+          {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+        </p>
+        <p className="text-xs text-gray-400">
+          {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+        </p>
+      </div>
     </header>
   )
 }
