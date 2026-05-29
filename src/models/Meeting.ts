@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose'
 
 export interface IAttendee {
+  rsvpToken: string
   email:  string
   name?:  string
   status: 'pending' | 'accepted' | 'declined'

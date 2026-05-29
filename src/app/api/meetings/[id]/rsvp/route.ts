@@ -40,9 +40,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       return NextResponse.redirect(`${APP_URL}/rsvp-error?reason=not_found`)
     }
 
-    const attendeeIdx = meeting.attendees.findIndex(
-      (a: { rsvpToken?: string }) => a.rsvpToken === token
-    )
+    const attendeeIdx = meeting.attendees.findIndex((a) => a.rsvpToken === token)
     if (attendeeIdx === -1) {
       return NextResponse.redirect(`${APP_URL}/rsvp-error?reason=invalid_token`)
     }
