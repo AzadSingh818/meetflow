@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const parsed = verifyRsvpToken({
     meetingId: searchParams.get('meetingId'),
     email:     searchParams.get('email'),
-    status:    searchParams.get('status'),
+    action:    searchParams.get('status'),
     sig:       searchParams.get('sig'),
   })
 

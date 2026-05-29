@@ -3,7 +3,7 @@ import type { IMeeting } from '@/models/Meeting'
 import { buildRsvpUrl } from '@/lib/rsvp-token'
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email'
-const FROM = process.env.EMAIL_FROM ?? 'noreply@meetflow.app'
+const FROM      = process.env.EMAIL_FROM      ?? 'noreply@meetflow.app'
 const FROM_NAME = process.env.EMAIL_FROM_NAME ?? 'MeetFlow'
 
 async function sendEmail(params: { to: string; subject: string; html: string }) {
@@ -13,17 +13,14 @@ async function sendEmail(params: { to: string; subject: string; html: string }) 
   const response = await fetch(BREVO_API_URL, {
     method: 'POST',
     headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      'api-key': apiKey,
+      Accept:           'application/json',
+      'Content-Type':   'application/json',
+      'api-key':        apiKey,
     },
     body: JSON.stringify({
-      sender: {
-        name: FROM_NAME,
-        email: FROM,
-      },
-      to: [{ email: params.to }],
-      subject: params.subject,
+      sender:      { name: FROM_NAME, email: FROM },
+      to:          [{ email: params.to }],
+      subject:     params.subject,
       htmlContent: params.html,
     }),
   })
@@ -53,19 +50,14 @@ function buildInviteHtml(p: {
 <tr><td align="center">
 <table width="560" cellpadding="0" cellspacing="0"
   style="background:#fff;border-radius:16px;border:1px solid #E2E8F0;overflow:hidden">
-
-  <!-- Header -->
   <tr><td style="background:#2563EB;padding:28px 32px">
     <p style="margin:0;font-size:12px;font-weight:600;color:#BFDBFE;letter-spacing:1px;text-transform:uppercase">Meeting Invitation</p>
     <h1 style="margin:8px 0 0;font-size:22px;font-weight:700;color:#fff">${p.title}</h1>
   </td></tr>
-
-  <!-- Body -->
   <tr><td style="padding:28px 32px">
     <p style="margin:0 0 20px;font-size:15px;color:#475569;line-height:1.6">
       <strong style="color:#0F172A">${p.organizer}</strong> has invited you to a meeting.
     </p>
-
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td style="padding:12px 0;border-top:1px solid #F1F5F9;vertical-align:top;width:28px"><span style="font-size:16px">📅</span></td>
@@ -92,14 +84,11 @@ function buildInviteHtml(p: {
         </td>
       </tr>` : ''}
     </table>
-
     ${p.meetLink ? `
     <div style="margin:24px 0 0;text-align:center">
       <a href="${p.meetLink}" class="btn" style="background:#2563EB;color:#fff">Join Meeting</a>
       <p style="margin:10px 0 0;font-size:12px;color:#94A3B8">Or copy: <a href="${p.meetLink}" style="color:#2563EB">${p.meetLink}</a></p>
     </div>` : ''}
-
-    <!-- RSVP section -->
     <div style="margin:28px 0 0;padding:20px;background:#F8FAFC;border-radius:12px;border:1px solid #E2E8F0;text-align:center">
       <p style="margin:0 0 16px;font-size:13px;font-weight:700;color:#0F172A;text-transform:uppercase;letter-spacing:0.5px">Will you attend?</p>
       <table cellpadding="0" cellspacing="0" style="margin:0 auto">
@@ -115,8 +104,6 @@ function buildInviteHtml(p: {
       <p style="margin:12px 0 0;font-size:11px;color:#94A3B8">You can change your response at any time by clicking the link again.</p>
     </div>
   </td></tr>
-
-  <!-- Footer -->
   <tr><td style="padding:18px 32px;background:#F8FAFC;border-top:1px solid #E2E8F0">
     <p style="margin:0;font-size:12px;color:#94A3B8;text-align:center">
       Sent via <strong style="color:#64748B">MeetFlow</strong> &middot; You received this as a meeting attendee.
@@ -208,10 +195,11 @@ export async function sendMeetingInvites(meeting: IMeeting, organizerName: strin
         subject: `Meeting invite: ${meeting.title}`,
         html:    buildInviteHtml({
           ...base,
+          // ── KEY FIX: use rsvpToken not email ──────────────────────────
           acceptUrl:  buildRsvpUrl(meeting._id.toString(), attendee.email, 'accepted'),
           declineUrl: buildRsvpUrl(meeting._id.toString(), attendee.email, 'declined'),
         }),
-      }).catch((err: any) => console.error(`[email] Failed → ${attendee.email}:`, err))
+      }).catch((err: unknown) => console.error(`[email] Failed → ${attendee.email}:`, err))
     )
   )
 }
@@ -223,7 +211,11 @@ export async function sendMeetingReminder(meeting: IMeeting, minutesBefore: numb
   const recipients = meeting.attendees.map(a => a.email).filter(Boolean)
   if (!recipients.length) return
 
-  const label = minutesBefore >= 1440 ? '1 day' : minutesBefore >= 60 ? `${minutesBefore / 60}h` : `${minutesBefore}m`
+  const label = minutesBefore >= 1440
+    ? '1 day'
+    : minutesBefore >= 60
+      ? `${minutesBefore / 60}h`
+      : `${minutesBefore}m`
 
   await Promise.allSettled(
     recipients.map(email =>
@@ -231,11 +223,11 @@ export async function sendMeetingReminder(meeting: IMeeting, minutesBefore: numb
         to:      email,
         subject: `Reminder (${label} away): ${meeting.title}`,
         html:    buildReminderHtml({
-          title:        meeting.title,
-          startTime:    meeting.startTime,
-          endTime:      meeting.endTime,
-          location:     meeting.location,
-          meetLink:     meeting.meetLink,
+          title:         meeting.title,
+          startTime:     meeting.startTime,
+          endTime:       meeting.endTime,
+          location:      meeting.location,
+          meetLink:      meeting.meetLink,
           minutesBefore,
         }),
       }).catch(console.error)

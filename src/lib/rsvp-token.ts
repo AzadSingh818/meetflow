@@ -14,18 +14,19 @@ function sign(payload: string): string {
 
 /**
  * Build a signed RSVP URL to embed in the email.
- * Format: /rsvp?meetingId=xxx&email=yyy&status=accepted&sig=zzz
+ * Format: /api/meetings/[id]/rsvp?email=yyy&action=accept&sig=zzz
  */
 export function buildRsvpUrl(
   meetingId: string,
-  email: string,
-  status: 'accepted' | 'declined'
+  email:     string,
+  status:    'accepted' | 'declined'
 ): string {
+  const action  = status === 'accepted' ? 'accept' : 'decline'
   const payload = `${meetingId}:${email}:${status}`
   const sig     = sign(payload)
   const base    = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
-  const params  = new URLSearchParams({ meetingId, email, status, sig })
-  return `${base}/rsvp?${params.toString()}`
+  const params  = new URLSearchParams({ email, action, sig })
+  return `${base}/api/meetings/${meetingId}/rsvp?${params.toString()}`
 }
 
 /**
@@ -35,14 +36,15 @@ export function buildRsvpUrl(
 export function verifyRsvpToken(params: {
   meetingId?: string | null
   email?:     string | null
-  status?:    string | null
+  action?:    string | null
   sig?:       string | null
 }): { meetingId: string; email: string; status: 'accepted' | 'declined' } | null {
-  const { meetingId, email, status, sig } = params
+  const { meetingId, email, action, sig } = params
 
-  if (!meetingId || !email || !status || !sig) return null
-  if (status !== 'accepted' && status !== 'declined') return null
+  if (!meetingId || !email || !action || !sig) return null
+  if (action !== 'accept' && action !== 'decline') return null
 
+  const status   = action === 'accept' ? 'accepted' : 'declined'
   const payload  = `${meetingId}:${email}:${status}`
   const expected = sign(payload)
 

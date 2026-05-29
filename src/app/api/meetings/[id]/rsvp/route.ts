@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { connectDB } from '@/lib/db'
 import Meeting from '@/models/Meeting'
+import { verifyRsvpToken } from '@/lib/rsvp-token'
 import { z } from 'zod'
 import mongoose from 'mongoose'
 
@@ -18,17 +19,24 @@ function isValidId(id: string) {
 
 const APP_URL = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
 
-// ── GET /api/meetings/[id]/rsvp?token=xxx&action=accept|decline ───────────
+// ── GET /api/meetings/[id]/rsvp?email=xxx&action=accept|decline&sig=yyy ───
 // Called when attendee clicks Accept/Decline in their email (no session needed)
 export async function GET(req: NextRequest, { params }: Params) {
   try {
     const { searchParams } = new URL(req.url)
-    const token  = searchParams.get('token')
-    const action = searchParams.get('action')   // 'accept' | 'decline'
 
-    if (!token || !action || !['accept', 'decline'].includes(action)) {
+    // Verify the HMAC signature
+    const verified = verifyRsvpToken({
+      meetingId: params.id,
+      email:     searchParams.get('email'),
+      action:    searchParams.get('action'),
+      sig:       searchParams.get('sig'),
+    })
+
+    if (!verified) {
       return NextResponse.redirect(`${APP_URL}/rsvp-error?reason=invalid_link`)
     }
+
     if (!isValidId(params.id)) {
       return NextResponse.redirect(`${APP_URL}/rsvp-error?reason=invalid_link`)
     }
@@ -40,19 +48,22 @@ export async function GET(req: NextRequest, { params }: Params) {
       return NextResponse.redirect(`${APP_URL}/rsvp-error?reason=not_found`)
     }
 
-    const attendeeIdx = meeting.attendees.findIndex((a) => a.rsvpToken === token)
+    // Find attendee by email
+    const attendees = meeting.attendees as any[]
+    const attendeeIdx = attendees.findIndex(
+      (a) => a.email.toLowerCase() === verified.email.toLowerCase()
+    )
+
     if (attendeeIdx === -1) {
-      return NextResponse.redirect(`${APP_URL}/rsvp-error?reason=invalid_token`)
+      return NextResponse.redirect(`${APP_URL}/rsvp-error?reason=not_attendee`)
     }
 
-    const newStatus = action === 'accept' ? 'accepted' : 'declined'
-    meeting.attendees[attendeeIdx].status = newStatus
+    meeting.attendees[attendeeIdx].status = verified.status
     await meeting.save()
 
-    // Redirect to a friendly confirmation page
-    const attendeeEmail = encodeURIComponent(meeting.attendees[attendeeIdx].email)
+    const attendeeEmail = encodeURIComponent(verified.email)
     return NextResponse.redirect(
-      `${APP_URL}/rsvp-confirmed?status=${newStatus}&meeting=${encodeURIComponent(meeting.title)}&email=${attendeeEmail}`
+      `${APP_URL}/rsvp-confirmed?status=${verified.status}&meeting=${encodeURIComponent(meeting.title)}&email=${attendeeEmail}`
     )
   } catch (err) {
     console.error('[GET /api/meetings/:id/rsvp]', err)
@@ -61,7 +72,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 }
 
 // ── POST /api/meetings/[id]/rsvp ──────────────────────────────────────────
-// Called from the in-app RSVPSection (session required)
+// Called from the in-app RSVPButtons (session required)
 export async function POST(req: NextRequest, { params }: Params) {
   try {
     const session = await getServerSession(authOptions)
@@ -76,9 +87,11 @@ export async function POST(req: NextRequest, { params }: Params) {
     const meeting = await Meeting.findById(params.id)
     if (!meeting) return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
 
-    const attendeeIdx = meeting.attendees.findIndex(
-      (a: { email: string }) => a.email === session.user.email
+    const attendees   = meeting.attendees as any[]
+    const attendeeIdx = attendees.findIndex(
+      (a) => a.email === session.user.email
     )
+
     if (attendeeIdx === -1) {
       return NextResponse.json({ error: 'You are not an attendee' }, { status: 400 })
     }

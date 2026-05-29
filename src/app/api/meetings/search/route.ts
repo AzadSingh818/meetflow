@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/auth'
 import { connectDB } from '@/lib/db'
 import Meeting from '@/models/Meeting'
 
+// Required: this route uses headers() via getServerSession
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/meetings/search?q=standup&limit=8
  * Returns meetings matching the search query (title, description, tags).
