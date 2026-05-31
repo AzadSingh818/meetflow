@@ -16,9 +16,10 @@ export async function GET(req: NextRequest) {
     await connectDB()
 
     const { searchParams } = new URL(req.url)
-    const status    = searchParams.get('status')
+    const search = searchParams.get('search')
+    const status = searchParams.get('status')
     const startDate = searchParams.get('startDate')
-    const endDate   = searchParams.get('endDate')
+    const endDate = searchParams.get('endDate')
 
     const query: Record<string, unknown> = {
       $or: [
@@ -27,9 +28,18 @@ export async function GET(req: NextRequest) {
       ],
     }
 
-    if (status)    query.status    = status
+    // ── Add these lines for search functionality ──────────────────────────────────────────
+    if (search) {
+      query.$and = [{ title: { $regex: search, $options: 'i' } }]
+    }
+    if (status) {
+      query.status = status
+    }
+    // ────────────────────────────────────────────────────────────
+
+    if (status) query.status = status
     if (startDate) query.startTime = { ...((query.startTime as object) ?? {}), $gte: new Date(startDate) }
-    if (endDate)   query.endTime   = { ...((query.endTime   as object) ?? {}), $lte: new Date(endDate) }
+    if (endDate) query.endTime = { ...((query.endTime as object) ?? {}), $lte: new Date(endDate) }
 
     const meetings = await Meeting
       .find(query)
@@ -59,7 +69,7 @@ export async function POST(req: NextRequest) {
       ...data,
       organizer: session.user.id,
       startTime: new Date(data.startTime),
-      endTime:   new Date(data.endTime),
+      endTime: new Date(data.endTime),
     })
 
     // Pass live Mongoose document (no .lean()) so .save() works inside sendMeetingInvites

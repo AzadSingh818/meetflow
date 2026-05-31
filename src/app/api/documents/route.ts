@@ -5,9 +5,9 @@ import { connectDB } from '@/lib/db'
 import MeetDocument from '@/models/MeetDocument'
 
 // ─────────────────────────────────────────────────────────────
-// GET ALL DOCUMENTS
+// GET ALL DOCUMENTS  (supports ?search=query)
 // ─────────────────────────────────────────────────────────────
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
@@ -20,9 +20,17 @@ export async function GET() {
 
     await connectDB()
 
-    const documents = await MeetDocument.find({
+    const search = req.nextUrl.searchParams.get('search')?.trim()
+
+    const query: Record<string, unknown> = {
       owner: session.user.id,
-    })
+    }
+
+    if (search) {
+      query.name = { $regex: search, $options: 'i' }
+    }
+
+    const documents = await MeetDocument.find(query)
       .sort({ createdAt: -1 })
       .lean()
 
@@ -30,7 +38,6 @@ export async function GET() {
 
   } catch (error) {
     console.error('[GET /api/documents]', error)
-
     return NextResponse.json(
       { error: 'Failed to fetch documents' },
       { status: 500 }
@@ -53,17 +60,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
+    const { name, type, url, storagePath, size, mimeType } = body
 
-    const {
-      name,
-      type,
-      url,
-      storagePath,
-      size,
-      mimeType,
-    } = body
-
-    // Validation
     if (!name || !url) {
       return NextResponse.json(
         { error: 'name and url are required' },
@@ -74,20 +72,19 @@ export async function POST(req: NextRequest) {
     await connectDB()
 
     const document = await MeetDocument.create({
-      owner: session.user.id,
+      owner:       session.user.id,
       name,
-      type: type || 'other',
+      type:        type        || 'other',
       url,
       storagePath: storagePath || '',
-      size: size || 0,
-      mimeType: mimeType || 'application/octet-stream',
+      size:        size        || 0,
+      mimeType:    mimeType    || 'application/octet-stream',
     })
 
     return NextResponse.json(document, { status: 201 })
 
   } catch (error) {
     console.error('[POST /api/documents]', error)
-
     return NextResponse.json(
       { error: 'Failed to create document' },
       { status: 500 }
@@ -109,9 +106,7 @@ export async function DELETE(req: NextRequest) {
       )
     }
 
-    const { searchParams } = new URL(req.url)
-
-    const id = searchParams.get('id')
+    const id = req.nextUrl.searchParams.get('id')
 
     if (!id) {
       return NextResponse.json(
@@ -123,7 +118,7 @@ export async function DELETE(req: NextRequest) {
     await connectDB()
 
     const document = await MeetDocument.findOne({
-      _id: id,
+      _id:   id,
       owner: session.user.id,
     })
 
@@ -143,7 +138,6 @@ export async function DELETE(req: NextRequest) {
 
   } catch (error) {
     console.error('[DELETE /api/documents]', error)
-
     return NextResponse.json(
       { error: 'Failed to delete document' },
       { status: 500 }
