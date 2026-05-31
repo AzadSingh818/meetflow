@@ -8,7 +8,9 @@ const nextConfig = {
     ],
   },
 
-  serverExternalPackages: ["mongoose", "bcrypt"],
+  experimental: {
+    serverComponentsExternalPackages: ['mongoose', 'bcrypt'],
+  },
 };
 
 module.exports = nextConfig;
