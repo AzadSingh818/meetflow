@@ -6,8 +6,14 @@ export default withAuth(
     const { pathname } = req.nextUrl
     const token = req.nextauth.token
 
-    // If user is logged in and tries to access auth pages, redirect to dashboard
-    if (token && (pathname === '/login' || pathname === '/register' || pathname === '/')) {
+    // If logged in, redirect away from auth pages
+    if (token && (
+      pathname === '/login' ||
+      pathname === '/register' ||
+      pathname === '/' ||
+      pathname.startsWith('/forgot-password') ||
+      pathname.startsWith('/reset-password')
+    )) {
       return NextResponse.redirect(new URL('/dashboard', req.url))
     }
 
@@ -15,17 +21,22 @@ export default withAuth(
   },
   {
     callbacks: {
-      // Return true to allow the middleware function to run,
-      // return false to redirect to login automatically
       authorized({ token, req }) {
         const { pathname } = req.nextUrl
 
-        // Always allow access to auth pages and public assets
+        // Public routes — no login required
         if (
           pathname.startsWith('/login') ||
           pathname.startsWith('/register') ||
+          pathname.startsWith('/forgot-password') ||  // ← added
+          pathname.startsWith('/reset-password') ||   // ← added
+          pathname.startsWith('/rsvp') ||
+          pathname.startsWith('/rsvp-confirmed') ||
+          pathname.startsWith('/rsvp-error') ||
           pathname.startsWith('/_next') ||
           pathname.startsWith('/api/auth') ||
+          pathname.startsWith('/api/auth/forgot-password') || // ← added
+          pathname.startsWith('/api/auth/reset-password') ||  // ← added
           pathname === '/favicon.ico'
         ) {
           return true
