@@ -45,7 +45,7 @@ export function buildResetToken(userId: string, email: string): string {
 // ── Build the full reset URL to embed in the email ─────────────────────────
 export function buildResetUrl(userId: string, email: string): string {
   const token = buildResetToken(userId, email)
-  const base  = process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
+  const base  = process.env.NEXTAUTH_URL ?? 'https://meetflow-ebon.vercel.app/'
   return `${base}/reset-password?token=${encodeURIComponent(token)}`
 }
 
