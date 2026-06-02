@@ -6,8 +6,8 @@ import User from '@/models/User'
 import { buildResetUrl } from '@/lib/reset-token'
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email'
-const FROM      = process.env.EMAIL_FROM      ?? 'noreply@meetflow.app'
-const FROM_NAME = process.env.EMAIL_FROM_NAME ?? 'MeetFlow'
+const FROM          = process.env.EMAIL_FROM      ?? 'noreply@meetflow.app'
+const FROM_NAME     = process.env.EMAIL_FROM_NAME ?? 'MeetFlow'
 
 async function sendResetEmail(to: string, subject: string, html: string) {
   const apiKey = process.env.BREVO_API_KEY
@@ -104,17 +104,23 @@ export async function POST(req: NextRequest) {
 
     await connectDB()
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() })
+    // ✅ FIX 1: .select('+password') is REQUIRED
+    // The User model has password: { select: false }
+    // Without this, user.password is always undefined — even for email accounts
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password')
 
     if (!user) {
-      console.log(`[forgot-password] No user found for ${email} — returning generic response`)
+      console.log(`[forgot-password] No user found for ${email}`)
       return NextResponse.json({ message: 'If that email exists, a reset link has been sent.' })
     }
 
     if (!user.password) {
-      console.log(`[forgot-password] User ${email} has no password (Google OAuth)`)
+      console.log(`[forgot-password] User ${email} has no password (Google OAuth) — cannot reset`)
+      // Still return 200 to prevent user enumeration
       return NextResponse.json({ message: 'If that email exists, a reset link has been sent.' })
     }
+
+    console.log(`[forgot-password] User ${email} has password — proceeding with reset`)
 
     const resetUrl = buildResetUrl(user._id.toString(), user.email)
     console.log(`[forgot-password] Reset URL: ${resetUrl}`)
@@ -127,7 +133,6 @@ export async function POST(req: NextRequest) {
       )
       console.log(`[forgot-password] Email sent successfully to ${user.email}`)
     } else {
-      // Dev fallback — print URL to terminal
       console.log('========================================')
       console.log('[forgot-password] DEV MODE — No BREVO_API_KEY')
       console.log(`[forgot-password] Reset URL: ${resetUrl}`)
